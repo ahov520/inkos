@@ -157,6 +157,29 @@ body {
 .text-\[12px\] { font-size: 13px; line-height: 1.25rem; }
 .text-\[13px\] { font-size: 14px; line-height: 1.35rem; }
 
+/* ── Mobile overrides: scale back the readability boost on small screens ── */
+@media (max-width: 640px) {
+  .text-xs { font-size: 0.6875rem; line-height: 1rem; }
+  .text-sm { font-size: 0.8125rem; line-height: 1.25rem; }
+  .text-base { font-size: 0.9375rem; line-height: 1.5rem; }
+  .text-lg { font-size: 1.0625rem; line-height: 1.6rem; }
+  .text-\[8px\] { font-size: 8px; }
+  .text-\[9px\] { font-size: 9px; }
+  .text-\[10px\] { font-size: 10px; }
+  .text-\[10\.5px\] { font-size: 10.5px; }
+  .text-\[11px\] { font-size: 11px; line-height: 1rem; }
+  .text-\[11\.5px\] { font-size: 11.5px; line-height: 1.1rem; }
+  .text-\[12px\] { font-size: 12px; line-height: 1.15rem; }
+  .text-\[13px\] { font-size: 13px; line-height: 1.25rem; }
+
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.375rem; }
+  h3 { font-size: 1.125rem; }
+
+  /* Hide scrollbar on touch devices for cleaner feel */
+  ::-webkit-scrollbar { width: 0; height: 0; }
+}
+
 /* ── Cursor interaction rules ── */
 button, [role="button"], a, select, label[for], summary { cursor: pointer; }
 button:disabled, [aria-disabled="true"] { cursor: not-allowed; }

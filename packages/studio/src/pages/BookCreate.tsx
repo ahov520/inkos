@@ -802,7 +802,7 @@ export function BookCreate({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunc
       </div>
 
       <div className="space-y-3">
-        <h1 className="font-serif text-4xl">{t("create.title")}</h1>
+        <h1 className="font-serif text-2xl sm:text-4xl">{t("create.title")}</h1>
         <p className="text-sm text-muted-foreground leading-7 max-w-2xl">{copy.idleBody}</p>
       </div>
 

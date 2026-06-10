@@ -475,7 +475,7 @@ export function ChatPage({ activeBookId, mode = activeBookId ? "book" : "book-cr
             scrollHeight: target.scrollHeight,
           });
         }}
-        className={`chat-message-scroll flex-1 overflow-y-auto [scrollbar-gutter:stable] px-4 py-6 transition-[padding] duration-200 ${worldPanelInsetClass}`}
+        className={`chat-message-scroll flex-1 overflow-y-auto [scrollbar-gutter:stable] px-2 sm:px-4 py-4 sm:py-6 transition-[padding] duration-200 ${worldPanelInsetClass}`}
       >
         {needsPlayModeChoice ? (
           <div className="h-full flex flex-col items-center justify-center text-center select-none gap-4">
@@ -614,7 +614,7 @@ export function ChatPage({ activeBookId, mode = activeBookId ? "book" : "book-cr
       {/* Quick actions (only when a book is active) */}
       {hasBook && !showChoicePanel && (
         <div className={`shrink-0 transition-[padding] duration-200 ${worldPanelInsetClass}`}>
-          <div className="max-w-3xl mx-auto w-full px-4">
+          <div className="max-w-3xl mx-auto w-full px-2 sm:px-4">
             <QuickActions
               onAction={handleQuickAction}
               disabled={loading || !activeSessionId}
@@ -643,11 +643,11 @@ export function ChatPage({ activeBookId, mode = activeBookId ? "book" : "book-cr
         </div>
       )}
       {needsPlayModeChoice ? null : (
-      <div className={`shrink-0 border-t border-border/40 px-4 py-3 transition-[padding] duration-200 ${worldPanelInsetClass}`}>
+      <div className={`shrink-0 border-t border-border/40 px-2 sm:px-4 py-2 sm:py-3 transition-[padding] duration-200 ${worldPanelInsetClass}`}>
         <div className="max-w-3xl mx-auto">
           <div className="flex items-start gap-2">
             <div className="flex-1 rounded-xl bg-secondary/30 transition-all">
-              <div className="flex items-center gap-2 px-3 py-2">
+              <div className="flex items-center gap-2 px-2 sm:px-3 py-2">
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -667,13 +667,13 @@ export function ChatPage({ activeBookId, mode = activeBookId ? "book" : "book-cr
                   {loading ? <Loader2 size={14} className="animate-spin" /> : <ArrowUp size={14} strokeWidth={2.5} />}
                 </button>
               </div>
-              <div className="flex items-center gap-2 px-3 pb-2 border-t border-border/20 pt-1.5">
+              <div className="flex items-center gap-2 px-2 sm:px-3 pb-2 border-t border-border/20 pt-1.5">
                 {modelPickerStatus === "loading" ? (
-                  <span className="text-[15px] text-muted-foreground/40 animate-pulse">加载模型...</span>
+                  <span className="text-[13px] sm:text-[15px] text-muted-foreground/40 animate-pulse">加载模型...</span>
                 ) : modelPickerStatus === "ready" ? (
                   <DropdownMenu>
-                    <DropdownMenuTrigger className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-muted text-[16px] transition-colors cursor-pointer">
-                      <span className="font-medium truncate max-w-[260px]">
+                    <DropdownMenuTrigger className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-muted text-[13px] sm:text-[16px] transition-colors cursor-pointer">
+                      <span className="font-medium truncate max-w-[140px] sm:max-w-[260px]">
                         {selectedModelLabel}
                       </span>
                       <ChevronDown size={17} className="text-muted-foreground" />
@@ -689,7 +689,7 @@ export function ChatPage({ activeBookId, mode = activeBookId ? "book" : "book-cr
                 ) : (
                   <button
                     onClick={() => nav.toServices()}
-                    className="text-[15px] text-muted-foreground/50 hover:text-primary transition-colors"
+                    className="text-[13px] sm:text-[15px] text-muted-foreground/50 hover:text-primary transition-colors"
                   >
                     配置模型 →
                   </button>
@@ -698,11 +698,11 @@ export function ChatPage({ activeBookId, mode = activeBookId ? "book" : "book-cr
                   <button
                     type="button"
                     onClick={() => setWorldPanelOpen((v) => !v)}
-                    className={`ml-auto flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[16px] font-medium transition-colors ${worldPanelOpen ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-primary"}`}
+                    className={`ml-auto flex items-center gap-1.5 rounded-md px-2 sm:px-3 py-1.5 text-[13px] sm:text-[16px] font-medium transition-colors ${worldPanelOpen ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-primary"}`}
                     title={isZh ? "查看世界：持有 / 状态 / 关系" : "View world: holdings / state / relations"}
                   >
                     <Gamepad2 size={18} />
-                    {isZh ? "查看世界" : "View World"}
+                    <span className="hidden sm:inline">{isZh ? "查看世界" : "View World"}</span>
                   </button>
                 )}
               </div>
