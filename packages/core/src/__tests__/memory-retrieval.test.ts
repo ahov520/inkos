@@ -265,6 +265,64 @@ describe("retrieveMemorySelection", () => {
     expect(result.summaries.map((summary) => summary.chapter)).toContain(50);
   });
 
+  it("rescues a paraphrased chapter that exact term matching misses (hybrid semantic retrieval)", async () => {
+    root = await mkdtemp(join(tmpdir(), "inkos-memory-retrieval-paraphrase-test-"));
+    const bookDir = join(root, "book");
+    const storyDir = join(bookDir, "story");
+    await mkdir(storyDir, { recursive: true });
+
+    // Chapter 12 paraphrases the goal ("誓令碎片" appears as "碎裂的誓令残片")
+    // and sits outside the 3-chapter recency window, so the old exact-substring
+    // filter would drop it entirely.
+    const paraphraseRow = "| 12 | 残玉旧事 | 林月 | 林月摩挲碎裂的誓令残玉，旧疾隐隐作痛 | 对师门往事的执念加深 | 誓约线索推进 | 低沉 | 主线回响 |";
+    const noiseRow = (chapter: number) =>
+      `| ${chapter} | 商会杂务${chapter} | 林月 | 林月处理商会杂务与路引试探 | 继续压住商会支线 | 支线试探 | 克制 | 过渡牵制 |`;
+
+    await Promise.all([
+      writeFile(
+        join(storyDir, "current_state.md"),
+        [
+          "| 字段 | 值 |",
+          "| --- | --- |",
+          "| 当前章节 | 20 |",
+          "| 当前目标 | 收束师门往事线 |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      ),
+      writeFile(join(storyDir, "pending_hooks.md"), "# Pending Hooks\n", "utf-8"),
+      writeFile(
+        join(storyDir, "chapter_summaries.md"),
+        [
+          "| 章节 | 标题 | 出场人物 | 关键事件 | 状态变化 | 伏笔动态 | 情绪基调 | 章节类型 |",
+          "| --- | --- | --- | --- | --- | --- | --- | --- |",
+          paraphraseRow,
+          noiseRow(17),
+          noiseRow(18),
+          noiseRow(19),
+          noiseRow(20),
+          "",
+        ].join("\n"),
+        "utf-8",
+      ),
+    ]);
+
+    const goal = "本章把注意力拉回誓令碎玉，写清它为什么裂开。";
+    const queryTerms = memoryRetrieval.extractQueryTerms(goal, undefined, []);
+    // Premise of this test: no extracted term literally appears in the
+    // paraphrased row — only the n-gram semantic signal can rescue it.
+    expect(queryTerms.length).toBeGreaterThan(0);
+    expect(queryTerms.some((term) => paraphraseRow.toLowerCase().includes(term.toLowerCase()))).toBe(false);
+
+    const result = await retrieveMemorySelection({
+      bookDir,
+      chapterNumber: 21,
+      goal,
+    });
+
+    expect(result.summaries.map((summary) => summary.chapter)).toContain(12);
+  });
+
   it("keeps the mentor-debt recap chapter in markdown fallback mode for English books", async () => {
     root = await mkdtemp(join(tmpdir(), "inkos-memory-retrieval-en-fallback-test-"));
     const bookDir = join(root, "book");

@@ -14,6 +14,11 @@ import {
   isHookWithinChapterWindow,
 } from "./hook-lifecycle.js";
 import {
+  extractNgramWeights,
+  ngramQueryCoverage,
+  type NgramWeights,
+} from "./local-semantic-similarity.js";
+import {
   parseChapterSummariesMarkdown,
   parseCurrentStateFacts,
   parsePendingHooksMarkdown,
@@ -357,25 +362,63 @@ function isUnresolvedHook(status: string): boolean {
   return status.trim().length === 0 || /open|待定|推进|active|progressing/i.test(status);
 }
 
+// ---------------------------------------------------------------------------
+// Hybrid retrieval (adapted from wkbin/zaomeng's HybridMemoryRetrievalStrategy):
+// exact term hits stay the primary signal; a local n-gram signal is a
+// secondary one that rescues paraphrases exact matching misses ("誓令碎玉"
+// vs "碎裂的誓令残玉"). The signal is asymmetric query coverage rather than
+// zaomeng's symmetric cosine because InkOS candidates (summary rows, facts)
+// are much longer than the focus-phrase query — see ngramQueryCoverage.
+// Thresholds are calibrated against the sample distribution in
+// local-semantic-similarity.test.ts and the paraphrase-retrieval test:
+// unrelated zh/en text scores exactly 0 and single-shared-character overlap
+// stays well below genuine paraphrase coverage.
+// ---------------------------------------------------------------------------
+
+/** Below this coverage the candidate is treated as unrelated (noise floor). */
+const SEMANTIC_NOISE_FLOOR = 0.05;
+/** At or above this coverage a candidate counts as "matched" for hard filters. */
+const SEMANTIC_MATCH_THRESHOLD = 0.1;
+/** Maps coverage [0,1] onto the exact-term score scale (one term hit ≈ 8-16). */
+const SEMANTIC_SCALE = 16;
+
+function semanticQueryWeights(queryTerms: ReadonlyArray<string>): NgramWeights {
+  return extractNgramWeights(queryTerms.join(" "));
+}
+
+function semanticSimilarityScore(queryWeights: NgramWeights, text: string): number {
+  const coverage = ngramQueryCoverage(queryWeights, extractNgramWeights(text));
+  return coverage < SEMANTIC_NOISE_FLOOR ? 0 : coverage;
+}
+
+function isSemanticMatch(coverage: number): boolean {
+  return coverage >= SEMANTIC_MATCH_THRESHOLD;
+}
+
 function selectRelevantSummaries(
   summaries: ReadonlyArray<StoredSummary>,
   chapterNumber: number,
   queryTerms: ReadonlyArray<string>,
 ): StoredSummary[] {
+  const queryWeights = semanticQueryWeights(queryTerms);
   return summaries
     .filter((summary) => summary.chapter < chapterNumber)
-    .map((summary) => ({
-      summary,
-      score: scoreSummary(summary, chapterNumber, queryTerms),
-      matched: matchesAny([
+    .map((summary) => {
+      const text = [
         summary.title,
         summary.characters,
         summary.events,
         summary.stateChanges,
         summary.hookActivity,
         summary.chapterType,
-      ].join(" "), queryTerms),
-    }))
+      ].join(" ");
+      const semantic = semanticSimilarityScore(queryWeights, text);
+      return {
+        summary,
+        score: scoreSummary(summary, chapterNumber, queryTerms) + semantic * SEMANTIC_SCALE,
+        matched: matchesAny(text, queryTerms) || isSemanticMatch(semantic),
+      };
+    })
     .filter((entry) => entry.matched || entry.summary.chapter >= chapterNumber - 3)
     .sort((left, right) => right.score - left.score || right.summary.chapter - left.summary.chapter)
     .slice(0, 4)
@@ -388,15 +431,17 @@ function selectRelevantHooks(
   queryTerms: ReadonlyArray<string>,
   chapterNumber: number,
 ): StoredHook[] {
+  const queryWeights = semanticQueryWeights(queryTerms);
   const ranked = hooks
-    .map((hook) => ({
-      hook,
-      score: scoreHook(hook, queryTerms, chapterNumber),
-      matched: matchesAny(
-        [hook.hookId, hook.type, hook.expectedPayoff, hook.payoffTiming ?? "", hook.notes].join(" "),
-        queryTerms,
-      ),
-    }))
+    .map((hook) => {
+      const text = [hook.hookId, hook.type, hook.expectedPayoff, hook.payoffTiming ?? "", hook.notes].join(" ");
+      const semantic = semanticSimilarityScore(queryWeights, text);
+      return {
+        hook,
+        score: scoreHook(hook, queryTerms, chapterNumber) + semantic * SEMANTIC_SCALE,
+        matched: matchesAny(text, queryTerms) || isSemanticMatch(semantic),
+      };
+    })
     .filter((entry: { hook: StoredHook; score: number; matched: boolean }) =>
       entry.matched || isUnresolvedHook(entry.hook.status),
     );
@@ -434,6 +479,7 @@ function selectRelevantFacts(
     /^(当前敌我|current alliances|current relationships)$/i,
   ];
 
+  const queryWeights = semanticQueryWeights(queryTerms);
   return facts
     .map((fact) => {
       const text = [fact.subject, fact.predicate, fact.object].join(" ");
@@ -443,11 +489,12 @@ function selectRelevantFacts(
         (score, term) => score + (includesTerm(text, term) ? Math.max(8, term.length * 2) : 0),
         0,
       );
+      const semantic = semanticSimilarityScore(queryWeights, text);
 
       return {
         fact,
-        score: baseScore + termScore,
-        matched: matchesAny(text, queryTerms),
+        score: baseScore + termScore + semantic * SEMANTIC_SCALE,
+        matched: matchesAny(text, queryTerms) || isSemanticMatch(semantic),
       };
     })
     .filter((entry) => entry.matched || entry.score >= 14)
@@ -462,6 +509,7 @@ function selectRelevantVolumeSummaries(
 ): VolumeSummarySelection[] {
   if (summaries.length === 0) return [];
 
+  const queryWeights = semanticQueryWeights(queryTerms);
   const ranked = summaries
     .map((summary, index) => {
       const text = `${summary.heading} ${summary.content}`;
@@ -469,12 +517,13 @@ function selectRelevantVolumeSummaries(
         (score, term) => score + (includesTerm(text, term) ? Math.max(8, term.length * 2) : 0),
         0,
       );
+      const semantic = semanticSimilarityScore(queryWeights, text);
 
       return {
         index,
         summary,
-        score: termScore + index,
-        matched: matchesAny(text, queryTerms),
+        score: termScore + semantic * SEMANTIC_SCALE + index,
+        matched: matchesAny(text, queryTerms) || isSemanticMatch(semantic),
       };
     })
     .filter((entry, index, all) => entry.matched || index === all.length - 1)
