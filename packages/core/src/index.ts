@@ -395,6 +395,15 @@ export { detectAIContent, type DetectionResult } from "./agents/detector.js";
 export { analyzeStyle } from "./agents/style-analyzer.js";
 export { analyzeDetectionInsights } from "./agents/detection-insights.js";
 export { validatePostWrite, detectParagraphLengthDrift, detectParagraphShapeWarnings, detectDuplicateTitle, type PostWriteViolation } from "./agents/post-write-validator.js";
+export {
+  detectLoreDrift,
+  extractNewTermCandidates,
+  loreDriftToPostWriteViolations,
+  type LoreDriftCode,
+  type LoreDriftWarning,
+  type DetectLoreDriftInput,
+} from "./agents/lore-drift.js";
+export { detectRepeatedNgrams } from "./agents/prose-repetition.js";
 export { ChapterAnalyzerAgent, type AnalyzeChapterInput, type AnalyzeChapterOutput } from "./agents/chapter-analyzer.js";
 export { parseWriterOutput, parseCreativeOutput, type ParsedWriterOutput, type CreativeOutput } from "./agents/writer-parser.js";
 export { buildSettlerSystemPrompt, buildSettlerUserPrompt } from "./agents/settler-prompts.js";
@@ -406,7 +415,7 @@ export { buildFanficCanonSection, buildCharacterVoiceProfiles, buildFanficModeIn
 export * from "./prompts/index.js";
 
 // Utils
-export { isNewLayoutBook, isBookFoundationComplete } from "./utils/outline-paths.js";
+export { isNewLayoutBook, isBookFoundationComplete, readStoryFrame, readVolumeMap, readCharacterContext, readCurrentStateWithFallback } from "./utils/outline-paths.js";
 export { fetchUrl, searchWeb } from "./utils/web-search.js";
 export { filterHooks, filterSummaries, filterSubplots, filterEmotionalArcs, filterCharacterMatrix } from "./utils/context-filter.js";
 export { extractPOVFromOutline, filterMatrixByPOV, filterHooksByPOV } from "./utils/pov-filter.js";

@@ -4158,6 +4158,89 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string) {
     }
   });
 
+  // --- Lore drift + intra-chapter repetition (deterministic, offline, zero LLM) ---
+  // Fused from NovelWriter's continuation postcheck / prose check. Safe for
+  // mobile clients: no model calls, pure text analysis over local files.
+
+  app.get("/api/v1/books/:id/lore-drift/:chapter", async (c) => {
+    const id = c.req.param("id");
+    const chapterNum = parseInt(c.req.param("chapter"), 10);
+    const bookDir = state.bookDir(id);
+
+    try {
+      const chaptersDir = join(bookDir, "chapters");
+      const files = await readdir(chaptersDir);
+      const paddedNum = String(chapterNum).padStart(4, "0");
+      const match = files.find((f) => f.startsWith(paddedNum) && f.endsWith(".md"));
+      if (!match) return c.json({ error: "Chapter not found" }, 404);
+      const content = await readFile(join(chaptersDir, match), "utf-8");
+
+      const {
+        detectLoreDrift,
+        detectRepeatedNgrams,
+        readStoryFrame,
+        readVolumeMap,
+        readCharacterContext,
+        readCurrentStateWithFallback,
+      } = await import("@actalk/inkos-core");
+
+      const readOr = async (path: string): Promise<string> => {
+        try {
+          return await readFile(path, "utf-8");
+        } catch {
+          return "";
+        }
+      };
+
+      // Recent chapters before the target chapter count as known lore.
+      const recentFiles = files
+        .filter((f) => f.endsWith(".md") && /^\d{4}/.test(f))
+        .map((f) => ({ num: parseInt(f.slice(0, 4), 10), file: f }))
+        .filter((entry) => entry.num < chapterNum)
+        .sort((a, b) => b.num - a.num)
+        .slice(0, 5);
+      const recentContents = await Promise.all(
+        recentFiles.map((entry) => readOr(join(chaptersDir, entry.file))),
+      );
+
+      const [storyFrame, volumeMap, characterContext, currentState, hooks, summaries, subplots, arcs, parentCanon, fanficCanon] = await Promise.all([
+        readStoryFrame(bookDir, ""),
+        readVolumeMap(bookDir, ""),
+        readCharacterContext(bookDir, ""),
+        readCurrentStateWithFallback(bookDir, ""),
+        readOr(join(bookDir, "story/pending_hooks.md")),
+        readOr(join(bookDir, "story/chapter_summaries.md")),
+        readOr(join(bookDir, "story/subplot_board.md")),
+        readOr(join(bookDir, "story/emotional_arcs.md")),
+        readOr(join(bookDir, "story/parent_canon.md")),
+        readOr(join(bookDir, "story/fanfic_canon.md")),
+      ]);
+
+      const book = await state.loadBookConfig(id);
+      const language: "zh" | "en" = book.language === "en" ? "en" : "zh";
+
+      const driftWarnings = detectLoreDrift({
+        content,
+        knownSources: [
+          storyFrame, volumeMap, characterContext, currentState, hooks,
+          summaries, subplots, arcs, parentCanon, fanficCanon,
+          ...recentContents,
+        ],
+        language,
+      });
+      const repetitionWarnings = detectRepeatedNgrams(content, language);
+
+      return c.json({
+        chapterNumber: chapterNum,
+        language,
+        driftWarnings,
+        repetitionWarnings,
+      });
+    } catch (e) {
+      return c.json({ error: String(e) }, 500);
+    }
+  });
+
   // --- Truth file edit ---
 
   app.put("/api/v1/books/:id/truth/:file{.+}", async (c) => {

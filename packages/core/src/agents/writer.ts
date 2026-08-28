@@ -15,6 +15,8 @@ import {
   validatePostWrite,
   type PostWriteViolation,
 } from "./post-write-validator.js";
+import { detectLoreDrift, loreDriftToPostWriteViolations } from "./lore-drift.js";
+import { detectRepeatedNgrams } from "./prose-repetition.js";
 import { analyzeAITells } from "./ai-tells.js";
 import type { ChapterIntent, ChapterMemo, ContextPackage, RuleStack } from "../models/input-governance.js";
 import type { LengthSpec } from "../models/length-governance.js";
@@ -382,10 +384,23 @@ export class WriterAgent extends BaseAgent {
     // ── Post-write validation (regex + rule-based, zero LLM cost) ──
     const surfaceNormalizedContent = normalizePostWriteSurface(creative.content, resolvedLanguage);
     const surfaceNormalizedWordCount = countChapterLength(surfaceNormalizedContent, resolvedLengthSpec.countingMode);
+    // Lore drift: newly invented proper nouns not backed by any known source.
+    const loreDriftWarnings = detectLoreDrift({
+      content: surfaceNormalizedContent,
+      knownSources: [
+        storyBible, volumeOutline, currentState, ledger, hooks,
+        chapterSummaries, subplotBoard, emotionalArcs, characterMatrix,
+        parentCanon, fanficCanonRaw, fingerprintChapters,
+        input.externalContext, input.chapterIntent,
+      ],
+      language: resolvedLanguage,
+    });
     const ruleViolations = [
       ...validatePostWrite(surfaceNormalizedContent, genreProfile, bookRules, resolvedLanguage),
       ...detectCrossChapterRepetition(surfaceNormalizedContent, fingerprintChapters, resolvedLanguage),
       ...detectParagraphLengthDrift(surfaceNormalizedContent, fingerprintChapters, resolvedLanguage),
+      ...detectRepeatedNgrams(surfaceNormalizedContent, resolvedLanguage),
+      ...loreDriftToPostWriteViolations(loreDriftWarnings, resolvedLanguage),
     ];
     const aiTellIssues = analyzeAITells(surfaceNormalizedContent, resolvedLanguage).issues;
 
