@@ -109,6 +109,16 @@ export type AgentLLMOverride = z.infer<typeof AgentLLMOverrideSchema>;
 export const InputGovernanceModeSchema = z.enum(["legacy", "v2"]);
 export type InputGovernanceMode = z.infer<typeof InputGovernanceModeSchema>;
 
+// Token 计价配置（可选）。配置后 analytics 会基于章节累计 token 用量估算成本，
+// 供 Studio Analytics 页面与 CLI `inkos analytics` 展示。单价按每 1K token 计。
+export const PricingConfigSchema = z.object({
+  promptPer1k: z.number().min(0).default(0),
+  completionPer1k: z.number().min(0).default(0),
+  currency: z.string().min(1).max(8).default("¥"),
+});
+
+export type PricingConfig = z.infer<typeof PricingConfigSchema>;
+
 const ModelOverrideValueSchema = z.union([z.string(), AgentLLMOverrideSchema]);
 
 export const ProjectConfigSchema = z.object({
@@ -126,6 +136,7 @@ export const ProjectConfigSchema = z.object({
   }),
   modelOverrides: z.record(z.string(), ModelOverrideValueSchema).optional(),
   inputGovernanceMode: InputGovernanceModeSchema.default("v2"),
+  pricing: PricingConfigSchema.optional(),
   daemon: z.object({
     schedule: z.object({
       radarCron: z.string().default("0 */6 * * *"),

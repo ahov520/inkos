@@ -1,9 +1,43 @@
+export interface CostEstimate {
+  readonly amount: number;
+  readonly promptCost: number;
+  readonly completionCost: number;
+  readonly currency: string;
+}
+
 export interface TokenStats {
   readonly totalPromptTokens: number;
   readonly totalCompletionTokens: number;
   readonly totalTokens: number;
   readonly avgTokensPerChapter: number;
   readonly recentTrend: ReadonlyArray<{ readonly chapter: number; readonly totalTokens: number }>;
+  readonly estimatedCost?: CostEstimate;
+}
+
+export interface PricingInput {
+  readonly promptPer1k: number;
+  readonly completionPer1k: number;
+  readonly currency: string;
+}
+
+function roundCost(value: number): number {
+  return Math.round(value * 10000) / 10000;
+}
+
+export function estimateCost(
+  promptTokens: number,
+  completionTokens: number,
+  pricing: PricingInput,
+): CostEstimate | undefined {
+  if (pricing.promptPer1k <= 0 && pricing.completionPer1k <= 0) return undefined;
+  const promptCost = roundCost((promptTokens / 1000) * pricing.promptPer1k);
+  const completionCost = roundCost((completionTokens / 1000) * pricing.completionPer1k);
+  return {
+    amount: roundCost(promptCost + completionCost),
+    promptCost,
+    completionCost,
+    currency: pricing.currency,
+  };
 }
 
 export interface AnalyticsData {
@@ -31,6 +65,7 @@ export function computeAnalytics(
       readonly totalTokens: number;
     };
   }>,
+  pricing?: PricingInput,
 ): AnalyticsData {
   const totalChapters = chapters.length;
   const totalWords = chapters.reduce((sum, ch) => sum + ch.wordCount, 0);
@@ -82,7 +117,11 @@ export function computeAnalytics(
       .slice(-5)
       .map((ch) => ({ chapter: ch.number, totalTokens: ch.tokenUsage?.totalTokens ?? 0 }));
 
-    tokenStats = { totalPromptTokens, totalCompletionTokens, totalTokens, avgTokensPerChapter, recentTrend };
+    const estimatedCost = pricing
+      ? estimateCost(totalPromptTokens, totalCompletionTokens, pricing)
+      : undefined;
+
+    tokenStats = { totalPromptTokens, totalCompletionTokens, totalTokens, avgTokensPerChapter, recentTrend, estimatedCost };
   }
 
   return {

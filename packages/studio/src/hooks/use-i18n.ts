@@ -71,6 +71,19 @@ const strings = {
   "analytics.totalWords": { zh: "总字数", en: "Total Words" },
   "analytics.avgWords": { zh: "平均字数/章", en: "Avg Words/Chapter" },
   "analytics.statusDist": { zh: "状态分布", en: "Status Distribution" },
+  "analytics.tokenUsage": { zh: "Token 用量", en: "Token Usage" },
+  "analytics.totalTokens": { zh: "总 Token", en: "Total Tokens" },
+  "analytics.promptTokens": { zh: "输入 Token", en: "Prompt Tokens" },
+  "analytics.completionTokens": { zh: "输出 Token", en: "Completion Tokens" },
+  "analytics.avgTokens": { zh: "平均 Token/章", en: "Avg Tokens/Chapter" },
+  "analytics.estimatedCost": { zh: "预估成本", en: "Estimated Cost" },
+  "analytics.pricingHint": {
+    zh: "在 inkos.json 配置 pricing（promptPer1k / completionPer1k / currency）后可显示成本估算。",
+    en: "Configure pricing (promptPer1k / completionPer1k / currency) in inkos.json to see cost estimates.",
+  },
+  "analytics.recentTrend": { zh: "近期章节 Token 趋势", en: "Recent Chapter Token Trend" },
+  "analytics.chapterPrefix": { zh: "第", en: "Ch." },
+  "analytics.chapterSuffix": { zh: "章", en: "" },
 
   // Breadcrumb
   "bread.books": { zh: "书籍", en: "Books" },
