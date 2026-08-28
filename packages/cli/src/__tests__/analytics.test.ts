@@ -151,4 +151,56 @@ describe("computeAnalytics", () => {
     // Sorted descending: ch8(8), ch7(7), ch6(6), ch5(5), ch4(4)
     expect(result.chaptersWithMostIssues[0]!.chapter).toBe(8);
   });
+
+  it("estimates cost from token usage when pricing is provided", () => {
+    const chapters = [
+      {
+        number: 1,
+        status: "approved",
+        wordCount: 3000,
+        auditIssues: [],
+        tokenUsage: { promptTokens: 10_000, completionTokens: 5_000, totalTokens: 15_000 },
+      },
+      {
+        number: 2,
+        status: "approved",
+        wordCount: 3200,
+        auditIssues: [],
+        tokenUsage: { promptTokens: 20_000, completionTokens: 10_000, totalTokens: 30_000 },
+      },
+    ];
+    const result = computeAnalytics("book-cost", chapters, {
+      promptPer1k: 0.002,
+      completionPer1k: 0.008,
+      currency: "¥",
+    });
+    expect(result.tokenStats?.estimatedCost).toEqual({
+      // prompt: 30k / 1000 * 0.002 = 0.06; completion: 15k / 1000 * 0.008 = 0.12
+      amount: 0.18,
+      promptCost: 0.06,
+      completionCost: 0.12,
+      currency: "¥",
+    });
+  });
+
+  it("omits estimated cost when pricing is absent or zero", () => {
+    const chapters = [
+      {
+        number: 1,
+        status: "approved",
+        wordCount: 3000,
+        auditIssues: [],
+        tokenUsage: { promptTokens: 10_000, completionTokens: 5_000, totalTokens: 15_000 },
+      },
+    ];
+    const withoutPricing = computeAnalytics("book-no-pricing", chapters);
+    expect(withoutPricing.tokenStats?.estimatedCost).toBeUndefined();
+
+    const zeroPricing = computeAnalytics("book-zero-pricing", chapters, {
+      promptPer1k: 0,
+      completionPer1k: 0,
+      currency: "$",
+    });
+    expect(zeroPricing.tokenStats?.estimatedCost).toBeUndefined();
+  });
 });

@@ -2064,7 +2064,11 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string) {
     const id = c.req.param("id");
     try {
       const chapters = await state.loadChapterIndex(id);
-      return c.json(computeAnalytics(id, chapters));
+      // Pricing 配置缺失或加载失败时照常返回统计，只是不带成本估算。
+      const pricing = await loadCurrentProjectConfig({ requireApiKey: false })
+        .then((cfg) => cfg.pricing)
+        .catch(() => cachedConfig.pricing);
+      return c.json(computeAnalytics(id, chapters, pricing));
     } catch {
       return c.json({ error: `Book "${id}" not found` }, 404);
     }

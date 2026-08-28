@@ -93,6 +93,8 @@ interface PlatformCopy {
   readonly chapterWordCountLabel: string;
   readonly briefLabel: string;
   readonly briefPlaceholder: string;
+  readonly inspirationButton: string;
+  readonly inspirationHint: string;
   readonly createBook: string;
   readonly creatingBook: string;
   readonly creationStatus: string;
@@ -145,6 +147,8 @@ const PAGE_COPY: Record<"zh" | "en", PlatformCopy> = {
     chapterWordCountLabel: "每章字数",
     briefLabel: "故事简介 / 核心设定",
     briefPlaceholder: "写清世界观、主角、目标、核心冲突和第一阶段方向。例如：近未来港口城，主角是水货账房，想洗白却被旧账拖回港口旧案。",
+    inspirationButton: "随机灵感",
+    inspirationHint: "会替换书名、题材和简介",
     createBook: "创建书籍",
     creatingBook: "创建中…",
     creationStatus: "正在创建书籍，完成后会自动进入工作台。",
@@ -181,6 +185,8 @@ const PAGE_COPY: Record<"zh" | "en", PlatformCopy> = {
     chapterWordCountLabel: "Words per chapter",
     briefLabel: "Story brief / core premise",
     briefPlaceholder: "Include the world, protagonist, goal, core conflict, and first arc direction.",
+    inspirationButton: "Random idea",
+    inspirationHint: "Replaces title, genre, and brief",
     createBook: "Create book",
     creatingBook: "Creating…",
     creationStatus: "Creating the book. The workspace will open automatically when it is ready.",
@@ -204,6 +210,132 @@ const PAGE_COPY: Record<"zh" | "en", PlatformCopy> = {
     helperBody: "Lock the world and protagonist first, then settle the conflict, blurb, and volume-one direction. In TUI, use /draft to inspect the same draft.",
   },
 };
+
+// 灵感种子：一键随机填充书名 / 题材 / 简介，消除"空白页恐惧"。
+// 纯静态数据，离线可用；简介结构对齐建书表单要求（世界观、主角、目标、冲突、第一阶段方向）。
+export interface InspirationSeed {
+  readonly title: string;
+  readonly genre: string;
+  readonly brief: string;
+}
+
+export const INSPIRATION_SEEDS: Record<"zh" | "en", ReadonlyArray<InspirationSeed>> = {
+  zh: [
+    {
+      title: "昨日循环",
+      genre: "都市悬疑",
+      brief: "现代都市，快递员陆沉被困在同一天，只有帮陌生人完成一件未竟之事才能推进几分钟。他想找到让时间恢复的锚点，却发现循环源头指向自己五年前放弃救的一个人。第一阶段：从摸清循环规则开始，逐单追踪当天所有收件人。",
+    },
+    {
+      title: "无声宴",
+      genre: "悬疑推理",
+      brief: "封闭古宅中的一场晚宴，七位宾客各自藏着一个不能说的秘密，规则是谁说谎谁出局。主角是被匿名邀请的速记员，目标是查出十年前姐姐失踪的真相。核心冲突：她自己也必须撒一个谎才能活着离场。第一阶段：宴会第一夜，用餐桌上的细节锁定第一个说谎者。",
+    },
+    {
+      title: "拾荒者之城",
+      genre: "科幻",
+      brief: "近未来轨道城市因资源配给制分裂成上下两层。主角是下层拾荒少女，捡到一枚记录上层政变计划的存储核。她的目标是用它换取妹妹的医疗配额，冲突在于买家双方都想灭口。第一阶段：在七十二小时配给周期内找到安全的交易渠道。",
+    },
+    {
+      title: "早餐铺的旧任务",
+      genre: "都市",
+      brief: "退休特工老周在菜市场卖早餐，隔壁新来的摊主动作习惯让他想起一段被抹除的旧任务。他的目标是安稳退休，冲突是旧组织认定他记起了不该记起的事。第一阶段：从摊主的进货路线查起，确认对方是监视还是求救。",
+    },
+    {
+      title: "内心弹幕",
+      genre: "都市奇幻",
+      brief: "濒死体验后，社恐编辑贺遥能听见别人的「内心弹幕」。她的目标是利用这个能力挽救濒临倒闭的杂志社，冲突在于弹幕只显示恶意、从不显示善意，她开始不信任所有人。第一阶段：用能力签下一位从不接受采访的隐居作家。",
+    },
+    {
+      title: "民宿第一位客人",
+      genre: "悬疑",
+      brief: "主角把家族古宅改成民宿，第一位住客指名要住阁楼，并提出一个不可告人的请求：帮他找一封六十年前藏在宅子里的信。目标是保住急需现金流的民宿，冲突是信的内容会推翻主角家族的立身之本。第一阶段：白天接待、夜里循着老宅图纸找暗格。",
+    },
+    {
+      title: "笔友1980",
+      genre: "科幻情感",
+      brief: "十二岁女孩在旧书里发现一个邮箱地址，与四十年前的年轻工程师成了跨时空笔友。她的目标是阻止信中提到的一场事故，冲突是每封信寄出后现实都会微调，她的家人开始一点点变得陌生。第一阶段：验证时间规则，确认哪些事能改、哪些不能。",
+    },
+    {
+      title: "雨伞与暗号",
+      genre: "民国情感",
+      brief: "民国上海，洋行小会计与地下党报务员因一把共用的雨伞结识。她的目标是攒钱赎回被典当的母亲遗物，他的目标是保住即将暴露的电台。核心冲突：她记账的洋行正是搜捕行动的资金源。第一阶段：从每周三雨天的固定相遇写起，铺设双线身份。",
+    },
+    {
+      title: "救一个人",
+      genre: "末日科幻",
+      brief: "末日前三十天，全人类同时收到一条消息：「你可以救一个人」。主角是急诊科医生，名额只有一个，候选人却越来越多。目标是找出消息发送者和规则漏洞，冲突是每个求救者背后都有他无法拒绝的理由。第一阶段：用医院的病例网络验证名额是否可转让。",
+    },
+    {
+      title: "覆火者",
+      genre: "玄幻",
+      brief: "灵火决定修行者命格的世界里，主角天生「无焰」，靠替宗门看守废弃丹房度日。他在灰烬里养出一缕会吞噬其他灵火的黑焰，目标是查清自己命格被夺的真相，冲突是黑焰每壮大一分、他就离被宗门定为妖类更近一步。第一阶段：藏住黑焰，通过外门大比拿到进入藏经阁的资格。",
+    },
+  ],
+  en: [
+    {
+      title: "The Yesterday Loop",
+      genre: "urban mystery",
+      brief: "A courier is trapped in the same day; time only inches forward when he finishes an unfinished errand for a stranger. He wants out of the loop, but the anchor points to someone he chose not to save five years ago. First arc: map the loop's rules by tracking every recipient on that day's route.",
+    },
+    {
+      title: "The Silent Banquet",
+      genre: "mystery",
+      brief: "Seven guests at a locked-manor dinner each hide one unspeakable secret; whoever lies is removed. The protagonist, an anonymous stenographer, wants the truth about her sister's disappearance ten years ago. The catch: she must tell one lie herself to leave alive. First arc: night one, catch the first liar through table details.",
+    },
+    {
+      title: "City of Scavengers",
+      genre: "sci-fi",
+      brief: "A near-future orbital city split by rationing into upper and lower rings. A scavenger girl finds a data core recording an upper-ring coup plan. She wants to trade it for her sister's medical quota; both potential buyers want her silenced. First arc: find a safe trade channel within one seventy-two-hour ration cycle.",
+    },
+    {
+      title: "Breakfast Stall Protocol",
+      genre: "slice-of-life thriller",
+      brief: "A retired operative sells breakfast in a wet market until a new vendor's habits echo an erased mission. He wants a quiet retirement; his old agency believes he remembers what he shouldn't. First arc: trace the vendor's supply route to learn if it's surveillance or a cry for help.",
+    },
+    {
+      title: "Inner Broadcast",
+      genre: "urban fantasy",
+      brief: "After a near-death experience, a shy editor hears other people's inner commentary. She wants to use it to save her dying magazine, but the broadcast only carries malice, never kindness, and she stops trusting anyone. First arc: sign a reclusive author who never gives interviews.",
+    },
+    {
+      title: "The First Guest",
+      genre: "suspense",
+      brief: "The protagonist turns the family manor into a guesthouse. The first guest books the attic and asks a private favor: find a letter hidden in the house sixty years ago. Keeping the guesthouse afloat is the goal; the letter would unmake the family's founding story. First arc: host by day, follow old blueprints to hidden panels by night.",
+    },
+    {
+      title: "Pen Pal 1980",
+      genre: "sci-fi romance",
+      brief: "A twelve-year-old girl finds an address in an old book and becomes pen pals with a young engineer forty years in the past. She wants to prevent an accident mentioned in his letters, but every reply subtly rewrites the present, and her family starts becoming strangers. First arc: test the rules — what can change and what cannot.",
+    },
+    {
+      title: "An Umbrella in Shanghai",
+      genre: "historical romance",
+      brief: "1930s Shanghai. A trading-house bookkeeper and an underground radio operator meet over a shared umbrella. She is saving to redeem her mother's pawned keepsake; he is protecting a transmitter about to be exposed. Her ledgers fund the manhunt closing in on him. First arc: build the double identities from their fixed rainy-Wednesday meetings.",
+    },
+    {
+      title: "Save One Person",
+      genre: "apocalyptic sci-fi",
+      brief: "Thirty days before the end, everyone receives the same message: \"You may save one person.\" An ER doctor has a single slot and a growing list of candidates. He wants to find the sender and the loophole; every petitioner has a reason he cannot refuse. First arc: use hospital records to test whether the slot is transferable.",
+    },
+    {
+      title: "The Ash Keeper",
+      genre: "fantasy",
+      brief: "In a world where spirit-flame decides a cultivator's fate, the protagonist was born flameless and tends an abandoned alchemy hall. From the ashes he raises a black flame that devours other flames. He wants the truth of his stolen fate; each time the flame grows, he edges closer to being branded an abomination. First arc: hide the flame and win archive access through the outer-sect tournament.",
+    },
+  ],
+};
+
+export function pickInspirationSeed(
+  language: "zh" | "en",
+  previousTitle?: string,
+): InspirationSeed {
+  const seeds = INSPIRATION_SEEDS[language];
+  const pool = previousTitle && seeds.length > 1
+    ? seeds.filter((seed) => seed.title !== previousTitle)
+    : seeds;
+  return pool[Math.floor(Math.random() * pool.length)]!;
+}
 
 export function pickValidValue(current: string, available: ReadonlyArray<string>): string {
   if (current && available.includes(current)) {
@@ -615,6 +747,13 @@ export function BookCreate({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunc
     setForm((current) => ({ ...current, ...patch }));
   };
 
+  const applyInspirationSeed = () => {
+    setForm((current) => {
+      const seed = pickInspirationSeed(projectLang, current.title);
+      return { ...current, title: seed.title, genre: seed.genre, brief: seed.brief };
+    });
+  };
+
   const applyDraftToForm = () => {
     if (!draft) {
       return;
@@ -820,11 +959,23 @@ export function BookCreate({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunc
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
         <section className="rounded-lg border border-border/60 bg-card/80 p-5 space-y-5">
-          <div className="space-y-1">
-            <div className="text-[11px] uppercase text-muted-foreground font-bold">
-              {copy.formHeading}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1 min-w-0">
+              <div className="text-[11px] uppercase text-muted-foreground font-bold">
+                {copy.formHeading}
+              </div>
+              <p className="text-xs text-muted-foreground leading-6">{copy.formHint}</p>
             </div>
-            <p className="text-xs text-muted-foreground leading-6">{copy.formHint}</p>
+            <button
+              type="button"
+              onClick={applyInspirationSeed}
+              disabled={creating || submitting}
+              title={copy.inspirationHint}
+              className={`inline-flex shrink-0 items-center gap-1.5 px-3 py-2 ${c.btnSecondary} rounded-md text-xs font-medium disabled:opacity-50`}
+            >
+              <Sparkles size={13} />
+              {copy.inspirationButton}
+            </button>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

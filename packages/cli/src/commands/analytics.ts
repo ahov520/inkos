@@ -9,13 +9,13 @@ export const analyticsCommand = new Command("analytics")
   .option("--json", "Output JSON")
   .action(async (bookIdArg: string | undefined, opts) => {
     try {
-      await loadConfig();
+      const config = await loadConfig();
       const root = findProjectRoot();
       const bookId = await resolveBookId(bookIdArg, root);
       const state = new StateManager(root);
       const chapters = await state.loadChapterIndex(bookId);
 
-      const analytics = computeAnalytics(bookId, chapters);
+      const analytics = computeAnalytics(bookId, chapters, config.pricing);
 
       if (opts.json) {
         log(JSON.stringify(analytics, null, 2));
@@ -42,6 +42,10 @@ export const analyticsCommand = new Command("analytics")
           log(`    Prompt tokens: ${analytics.tokenStats.totalPromptTokens.toLocaleString()}`);
           log(`    Completion tokens: ${analytics.tokenStats.totalCompletionTokens.toLocaleString()}`);
           log(`    Avg tokens/chapter: ${analytics.tokenStats.avgTokensPerChapter.toLocaleString()}`);
+          if (analytics.tokenStats.estimatedCost) {
+            const { currency, amount, promptCost, completionCost } = analytics.tokenStats.estimatedCost;
+            log(`    Estimated cost: ${currency}${amount} (prompt ${currency}${promptCost} + completion ${currency}${completionCost})`);
+          }
           if (analytics.tokenStats.recentTrend.length > 0) {
             log("    Recent trend:");
             for (const { chapter, totalTokens } of analytics.tokenStats.recentTrend) {

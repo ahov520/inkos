@@ -8,7 +8,9 @@ import {
   defaultBookCreateForm,
   defaultChapterWordsForLanguage,
   ensureBookCreateSessionId,
+  INSPIRATION_SEEDS,
   isBookCreateFormReady,
+  pickInspirationSeed,
   platformOptionsForLanguage,
   pickValidValue,
   resolveDraftInstruction,
@@ -24,6 +26,49 @@ describe("pickValidValue", () => {
     expect(pickValidValue("", ["mystery", "romance"])).toBe("mystery");
     expect(pickValidValue("invalid", ["mystery", "romance"])).toBe("mystery");
     expect(pickValidValue("", [])).toBe("");
+  });
+});
+
+describe("inspiration seeds", () => {
+  it("provides non-empty title, genre, and brief for both languages", () => {
+    for (const language of ["zh", "en"] as const) {
+      expect(INSPIRATION_SEEDS[language].length).toBeGreaterThan(0);
+      for (const seed of INSPIRATION_SEEDS[language]) {
+        expect(seed.title.trim()).not.toBe("");
+        expect(seed.genre.trim()).not.toBe("");
+        expect(seed.brief.trim()).not.toBe("");
+      }
+    }
+  });
+
+  it("keeps seed titles unique per language", () => {
+    for (const language of ["zh", "en"] as const) {
+      const titles = INSPIRATION_SEEDS[language].map((seed) => seed.title);
+      expect(new Set(titles).size).toBe(titles.length);
+    }
+  });
+
+  it("picks a seed from the requested language", () => {
+    const seed = pickInspirationSeed("en");
+    expect(INSPIRATION_SEEDS.en.some((s) => s.title === seed.title)).toBe(true);
+  });
+
+  it("avoids repeating the previous title when more than one seed exists", () => {
+    const previous = INSPIRATION_SEEDS.zh[0]!.title;
+    for (let i = 0; i < 25; i += 1) {
+      expect(pickInspirationSeed("zh", previous).title).not.toBe(previous);
+    }
+  });
+
+  it("fills a form that passes creation readiness when combined with defaults", () => {
+    const seed = pickInspirationSeed("zh");
+    const form = {
+      ...defaultBookCreateForm("zh"),
+      title: seed.title,
+      genre: seed.genre,
+      brief: seed.brief,
+    };
+    expect(isBookCreateFormReady(form)).toBe(true);
   });
 });
 
