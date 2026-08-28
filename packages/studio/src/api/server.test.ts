@@ -274,6 +274,12 @@ vi.mock("@actalk/inkos-core", async (importOriginal) => {
     appendManualSessionMessages: appendManualSessionMessagesMock,
     isNewLayoutBook: vi.fn(async () => false),
     isBookFoundationComplete: actual.isBookFoundationComplete,
+    detectLoreDrift: actual.detectLoreDrift,
+    detectRepeatedNgrams: actual.detectRepeatedNgrams,
+    readStoryFrame: actual.readStoryFrame,
+    readVolumeMap: actual.readVolumeMap,
+    readCharacterContext: actual.readCharacterContext,
+    readCurrentStateWithFallback: actual.readCurrentStateWithFallback,
     tryParseBookRulesFrontmatter: actual.tryParseBookRulesFrontmatter,
     renameBookSession: renameBookSessionMock,
     deleteBookSession: deleteBookSessionMock,
@@ -2342,6 +2348,59 @@ describe("createStudioServer daemon lifecycle", () => {
     });
     expect(rollbackToChapterMock).toHaveBeenCalledWith("demo-book", 2);
     expect(saveChapterIndexMock).not.toHaveBeenCalled();
+  });
+
+  it("runs offline lore-drift and repetition analysis for a chapter", async () => {
+    const bookDir = join(root, "books", "demo-book");
+    await mkdir(join(bookDir, "story"), { recursive: true });
+    await writeFile(
+      join(bookDir, "story", "story_bible.md"),
+      "主角张三在青云宗修行，宗门至宝是天罡剑。",
+      "utf-8",
+    );
+    await writeFile(
+      join(bookDir, "chapters", "0007_Drift.md"),
+      [
+        "# 第7章 异变",
+        "",
+        "张三握着天罡剑，忽见一枚【离火令】悬在半空。",
+        "他深吸一口气。他深吸一口气。他深吸一口气。",
+      ].join("\n"),
+      "utf-8",
+    );
+    loadBookConfigMock.mockResolvedValue({
+      id: "demo-book",
+      title: "Demo",
+      language: "zh",
+    });
+
+    const { createStudioServer } = await import("./server.js");
+    const app = createStudioServer(cloneProjectConfig() as never, root);
+
+    const response = await app.request("http://localhost/api/v1/books/demo-book/lore-drift/7");
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      chapterNumber: number;
+      language: string;
+      driftWarnings: Array<{ term: string; code: string }>;
+      repetitionWarnings: Array<{ description: string }>;
+    };
+    expect(body.chapterNumber).toBe(7);
+    expect(body.language).toBe("zh");
+    // 天罡剑 is in the story bible (known); 离火令 is invented (drift).
+    const driftTerms = body.driftWarnings.map((w) => w.term);
+    expect(driftTerms).toContain("离火令");
+    expect(driftTerms).not.toContain("天罡剑");
+    expect(body.repetitionWarnings).toHaveLength(1);
+    expect(body.repetitionWarnings[0]!.description).toContain("深吸一口气");
+  });
+
+  it("returns 404 for lore-drift analysis on a missing chapter", async () => {
+    const { createStudioServer } = await import("./server.js");
+    const app = createStudioServer(cloneProjectConfig() as never, root);
+
+    const response = await app.request("http://localhost/api/v1/books/demo-book/lore-drift/99");
+    expect(response.status).toBe(404);
   });
 
   it("routes create requests through the shared structured interaction runtime", async () => {
